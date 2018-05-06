@@ -1,46 +1,75 @@
-html, body, #wrapper {
-	width: 100%;
-	height: 100%;
-	margin: 0px;
+
+* {
+	margin: 0;
+	padding: 0;
 }
- 
-.chart {
-	font-family: Arial, sans-serif;
-	font-size: 12px;
+
+body {
+	background: #fff;
+	font-family: 'Open-Sans',sans-serif;
 }
- 
-.axis path,.axis line {
-	fill: none;
-	stroke: #000;
+
+.svg {
+	margin: 0 10px;
+	/*width:1900px;
+	height:400px;
+	overflow: visible;
+	position:absolute;*/
+}
+
+.grid .tick {
+	stroke: lightgrey;
+	opacity: 0.3;
 	shape-rendering: crispEdges;
 }
 
-.y.axis {
-	font-size: 14px;
-	font-weight: 600;
-}
- 
-.bar {
-	fill: #33b5e5;
-}
- 
-.bar-failed {
-	fill: #CC0000;
-}
- 
-.bar-running {
-	fill: #669900;
-}
- 
-.bar-succeeded {
-	fill: #33b5e5;
-}
- 
-.bar-killed {
-	fill: #ffbb33;
+.grid path {
+	stroke-width: 0;
 }
 
-.extent {
-	fill: red;
-	height: calc(100% - 110px);
+#tooltip {
+	position: absolute;
+	margin-left: -80px;
+	padding: 14px;
+	display: none;
+	color: white;
+	background: #FA283D;
+	font-size: 11px;
+}
+
+/*#tag:before {
+	border: solid transparent;
+	content: ' ';
+	height: 0;
+	left: 50%;
+	margin-left: -5px;
+	position: absolute;
+	width: 0;
+	border-width: 10px;
+	border-bottom-color: #FA283D;
+	top: -20px;
+}*/
+
+.INPR {
+	fill: #e2f442;
+}
+
+.INAN {
+	fill: #f44141;
+}
+
+.INTH {
+	fill: #41f4af;
+}
+
+.RECA {
+	fill: #41a6f4;
+}
+
+.REC1 {
+	fill: #c141f4;
+}
+
+.REC2 {
+	fill: #f4418b;
 }
