@@ -11,10 +11,6 @@ body {
 
 .svg {
 	margin: 0 40px;
-	/*width:1900px;
-	height:400px;
-	overflow: visible;
-	position:absolute;*/
 }
 
 .grid .tick {
@@ -36,19 +32,6 @@ body {
 	background: #FA283D;
 	font-size: 11px;
 }
-
-/*#tag:before {
-	border: solid transparent;
-	content: ' ';
-	height: 0;
-	left: 50%;
-	margin-left: -5px;
-	position: absolute;
-	width: 0;
-	border-width: 10px;
-	border-bottom-color: #FA283D;
-	top: -20px;
-}*/
 
 .INPR {
 	fill: #3a2d2f;
