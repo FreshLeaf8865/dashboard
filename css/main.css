@@ -10,7 +10,7 @@ body {
 }
 
 .svg {
-	margin: 0 40px;
+	margin: 40px;
 }
 
 .grid .tick {
@@ -23,36 +23,71 @@ body {
 	stroke-width: 0;
 }
 
+.axis {
+	font-size: 10px;
+}
+
+.axis path, .axis line {
+	fill: none;
+	stroke: #000;
+	shape-rendering: crispEdges;
+}
+
+.brush {
+	pointer-events: none !important;
+}
+
+.brush .extent {
+	stroke: #fff;
+	fill-opacity: .125;
+	shape-rendering: crispEdges;
+	pointer-events: all;
+}
+
+g.brush > .resize {
+	display: none;
+}
+
 #tooltip {
 	position: absolute;
 	margin-left: -80px;
 	padding: 14px;
 	display: none;
-	color: white;
-	background: #FA283D;
 	font-size: 11px;
 }
 
 .INPR {
-	fill: #3a2d2f;
+	fill: #89847e;
+	background-color: #89847e;
+	color: #000;
 }
 
 .INAN {
 	fill: #f44141;
+	background-color: #f44141;
+	color: #fff;
 }
 
 .INTH {
 	fill: #41f4af;
+	background-color: #41f4af;
+	color: #000;
 }
 
 .RECA {
 	fill: #41a6f4;
+	background-color: #41a6f4;
+	color: #fff;
 }
 
 .REC1 {
 	fill: #c141f4;
+	background-color: #c141f4;
+	color: #fff;
 }
 
 .REC2 {
 	fill: #f4418b;
+	background-color: #f4418b;
+	color: #fff;
 }
