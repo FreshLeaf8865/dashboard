@@ -83,6 +83,8 @@ var groupName = {
 	Endo: 'Endo Proc Theatres'
 }
 
+var filterValue = 'All'
+
 var margin = {
 	top : 40,
 	right : 40,
@@ -95,7 +97,7 @@ var dashboard = function() {
 		d3.csv("/csv/events.csv", function(events) {
 			var barHeight = 20
 			var gap = barHeight + 4
-			var topPadding = 100
+			var topPadding = 60
 			var sidePadding = 75
 
 			operations = sortByKey(operations, 'USAGE')
@@ -119,416 +121,491 @@ var dashboard = function() {
 				}
 			}
 
-			rooms = tempRooms
-			operations = tempOperations
+			var allrooms = tempRooms
+			var alloperations = tempOperations
+			var alloperationusages = []
 
-			var operationusages = []
-			var roomusages = []
-
-			for (let i = 0; i < operations.length; i++) {
-				operationusages.push(operations[i].USAGE)
+			for (let i = 0; i < alloperations.length; i++) {
+				alloperationusages.push(alloperations[i].USAGE)
 			}
 
-			for (let i = 0; i < rooms.length; i++) {
-				roomusages.push(rooms[i].usage)
-			}
-
-			var operationusagesUnfiltered = operationusages
-			var roomusagesUnfiltered = roomusages
-
-			operationusages = checkUnique(operationusages)
-			roomusages = checkUnique(roomusages)
-
-			/******************************************************** Grouping ********************************************************************/
-
-			var numOpOccurances = []
-			var numRoomOccurances = []
-			var prevGap = 0
-
-			for (let i = 0; i < operationusages.length; i++) {
-				numOpOccurances[i] = [operationusages[i], getCount(operationusages[i], operationusagesUnfiltered)]
-			}
-
-			for (let i = 0; i < roomusages.length; i++) {
-				numRoomOccurances[i] = [roomusages[i], getCount(roomusages[i], roomusagesUnfiltered)]
-			}
+			alloperationusages = checkUnique(alloperationusages)
 
 			var keysOfGroupName = Object.keys(groupName)
 			var group = []
-			var tempGroup = []
 
-			for (let i in numOpOccurances) {
+			for (let i in alloperationusages) {
 				for (let j in keysOfGroupName) {
-					if (numOpOccurances[i][0].indexOf(keysOfGroupName[j]) !== -1) {
-						group.push([keysOfGroupName[j], numOpOccurances[i][1], numRoomOccurances[i][1]])
+					if (alloperationusages[i].indexOf(keysOfGroupName[j]) !== -1) {
+						group.push(keysOfGroupName[j])
 						break
 					}
 				}
 			}
 
-			for (let i in group) {
-				if (typeof tempGroup[group[i][0]] !== 'undefined') {
-					tempGroup[group[i][0]][0] += group[i][1]
-					tempGroup[group[i][0]][1] += group[i][2]
-				} else {
-					tempGroup[group[i][0]] = [group[i][1], group[i][2]]
-				}
+			uniqueGroup = checkUnique(group)
+			groupUnfiltered = group
+
+			var numOccurances = []
+
+			for (let i = 0; i < uniqueGroup.length; i++) {
+				numOccurances[i] = [uniqueGroup[i], getCount(uniqueGroup[i], groupUnfiltered)]
 			}
 
 			group = []
-
-			var keysOfTempGroup = Object.keys(tempGroup)
-
-			for (let i in keysOfTempGroup) {
-				group[i] = [keysOfTempGroup[i], tempGroup[keysOfTempGroup[i]][0], tempGroup[keysOfTempGroup[i]][1]]
-			}
-
-			console.log(group)
-
-			/*********************************************************************************************************************************************/
-
-			/******************************************** Add empty record to operations for group title *************************************************/
-			operations = []
-
 			var currentKey = 0
 
-			for (let i in group) {
-				operations[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[group[i][0]], USAGE: group[i][0]}
+			for (let i in numOccurances) {
+				group[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[numOccurances[i][0]]}
 
-				for (let j = currentKey; j < currentKey + group[i][1]; j++) {
-					operations[parseInt(j) + parseInt(i) + 1] = tempOperations[j]
+				for (let j = currentKey; j < currentKey + numOccurances[i][1]; j++) {
+					group[parseInt(j) + parseInt(i) + 1] = {usage: alloperationusages[j]}
 				}
 
-				currentKey += group[i][1]
+				currentKey += numOccurances[i][1]
 			}
 
-			console.log(operations)
-			/*********************************************************************************************************************************************/
-
-			/******************************************** Add empty record to rooms for group title *************************************************/
-			rooms = []
-
-			var currentKey = 0
+			/******************** draw filter box ********************/
+			var filterboxHtml = "<option>All</option><optgroup>"
 
 			for (let i in group) {
-				rooms[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[group[i][0]], opNumber: 1}
+				if (typeof group[i].groupTitle !== 'undefined') {
+					filterboxHtml += '</optgroup><optgroup label="' + group[i].groupTitle + '">'
+				} else {
+					var selected = group[i].usage == filterValue ? 'selected' : ''
+					filterboxHtml += '<option ' + selected + '>' + group[i].usage + '</option>'
+				}
+			}
+			$(".group-filter").html(filterboxHtml)
+			/*********************************************************/
 
-				for (let j = currentKey; j < currentKey + group[i][2]; j++) {
-					rooms[parseInt(j) + parseInt(i) + 1] = tempRooms[j]
+			function process() {
+				if (filterValue == 'All') {
+					rooms = allrooms
+					operations = alloperations
+				} else {
+					rooms = [], operations = []
+
+					for (let i in allrooms) {
+						if (allrooms[i].usage == filterValue) {
+							rooms.push(allrooms[i])
+						}
+					}
+
+					for (let i in alloperations) {
+						if (alloperations[i].USAGE == filterValue) {
+							operations.push(alloperations[i])
+						}
+					}
 				}
 
-				currentKey += group[i][2]
-			}
+				tempOperations = operations
+				tempRooms = rooms
 
-			console.log(rooms)
-			/*********************************************************************************************************************************************/
+				var operationusages = []
+				var roomusages = []
 
-			/******************************************** get numOpOccurances from operations including group title ***************************************/
-			var operationusages = []
+				for (let i = 0; i < operations.length; i++) {
+					operationusages.push(operations[i].USAGE)
+				}
 
-			for (let i = 0; i < operations.length; i++) {
-				operationusages.push(operations[i].USAGE)
-			}
+				for (let i = 0; i < rooms.length; i++) {
+					roomusages.push(rooms[i].usage)
+				}
 
-			var operationusagesUnfiltered = operationusages
+				var operationusagesUnfiltered = operationusages
+				var roomusagesUnfiltered = roomusages
 
-			operationusages = checkUnique(operationusages)
+				operationusages = checkUnique(operationusages)
+				roomusages = checkUnique(roomusages)
 
-			var numOpOccurances = []
+				/******************************************************** Grouping ********************************************************************/
 
-			for (let i = 0; i < operationusages.length; i++) {
-				numOpOccurances[i] = [operationusages[i], getCount(operationusages[i], operationusagesUnfiltered)]
-			}
-			/*********************************************************************************************************************************************/
+				var numOpOccurances = [], numRoomOccurances = []
 
-			var w = document.body.clientWidth - margin.left - margin.right
-			var h = (operations.length) * gap + 180
+				for (let i = 0; i < operationusages.length; i++) {
+					numOpOccurances[i] = [operationusages[i], getCount(operationusages[i], operationusagesUnfiltered)]
+				}
 
-			var today = new Date()
+				for (let i = 0; i < roomusages.length; i++) {
+					numRoomOccurances[i] = [roomusages[i], getCount(roomusages[i], roomusagesUnfiltered)]
+				}
 
-			var timeDomainStart = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 08:00:00")
-			var timeDomainEnd = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 17:59:59")
-			var timeDomainStart2 = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 00:00:00")
-			var timeDomainEnd2 = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 23:59:59")
-			var x = d3.time.scale().domain([timeDomainStart, timeDomainEnd]).range([0, w - sidePadding]).clamp(true)
-			var x2 = d3.time.scale().domain([timeDomainStart2, timeDomainEnd2]).range([0, w - sidePadding]).clamp(true)
+				var group = [], tempGroup = []
 
-			d3.select("svg").remove()
+				for (let i in numOpOccurances) {
+					for (let j in keysOfGroupName) {
+						if (numOpOccurances[i][0].indexOf(keysOfGroupName[j]) !== -1) {
+							group.push([keysOfGroupName[j], numOpOccurances[i][1], numRoomOccurances[i][1]])
+							break
+						}
+					}
+				}
 
-			var svg = d3.selectAll(".svg")
-									.append("svg")
-									.attr("width", w)
-									.attr("height", h + 100)
+				for (let i in group) {
+					if (typeof tempGroup[group[i][0]] !== 'undefined') {
+						tempGroup[group[i][0]][0] += group[i][1]
+						tempGroup[group[i][0]][1] += group[i][2]
+					} else {
+						tempGroup[group[i][0]] = [group[i][1], group[i][2]]
+					}
+				}
 
-			/***************************************************************** title **********************************************************************/
+				group = []
 
-			var title = svg.append("text")
-										.text("Real-Time Theatre Dashboard")
-										.attr("x", w / 2)
-										.attr("y", 25)
-										.attr("text-anchor", "middle")
-										.attr("font-size", 18)
-										.attr("fill", "#009FFC")
+				var keysOfTempGroup = Object.keys(tempGroup)
 
-			/********************************************************************************************************************************************/
+				for (let i in keysOfTempGroup) {
+					group[i] = [keysOfTempGroup[i], tempGroup[keysOfTempGroup[i]][0], tempGroup[keysOfTempGroup[i]][1]]
+				}
 
-			/****************************************************************** vertlabels **************************************************************/
-			var axisText = svg.append("g")
-												.selectAll("text")
-												.data(numOpOccurances)
-												.enter()
-												.append("text")
-												.text(function(d) {
-													if (groupName.hasOwnProperty(d[0])) {
-														return groupName[d[0]]
-													}
-													return d[0]
-												})
-												.attr("x", 4)
-												.attr("y", function(d, i) {
-													if (i > 0) {
-														for (let j = 0; j < i; j++) {
-															prevGap += numOpOccurances[i - 1][1]
-															return prevGap * gap + topPadding + 12
+				/*********************************************************************************************************************************************/
+
+				/******************************************** Add empty record to operations for group title *************************************************/
+				operations = []
+
+				var currentKey = 0
+
+				for (let i in group) {
+					operations[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[group[i][0]], USAGE: group[i][0]}
+
+					for (let j = currentKey; j < currentKey + group[i][1]; j++) {
+						operations[parseInt(j) + parseInt(i) + 1] = tempOperations[j]
+					}
+
+					currentKey += group[i][1]
+				}
+				/*********************************************************************************************************************************************/
+
+				/******************************************** Add empty record to rooms for group title *************************************************/
+				rooms = []
+
+				var currentKey = 0
+
+				for (let i in group) {
+					rooms[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[group[i][0]], opNumber: 1}
+
+					for (let j = currentKey; j < currentKey + group[i][2]; j++) {
+						rooms[parseInt(j) + parseInt(i) + 1] = tempRooms[j]
+					}
+
+					currentKey += group[i][2]
+				}
+				/*********************************************************************************************************************************************/
+
+				/******************************************** get numOpOccurances from operations including group title ***************************************/
+				var operationusages = []
+
+				for (let i = 0; i < operations.length; i++) {
+					operationusages.push(operations[i].USAGE)
+				}
+
+				var operationusagesUnfiltered = operationusages
+
+				operationusages = checkUnique(operationusages)
+
+				var numOpOccurances = []
+
+				for (let i = 0; i < operationusages.length; i++) {
+					numOpOccurances[i] = [operationusages[i], getCount(operationusages[i], operationusagesUnfiltered)]
+				}
+				/*********************************************************************************************************************************************/
+
+				var w = document.body.clientWidth - margin.left - margin.right
+				var h = (operations.length) * gap + topPadding * 2 + 60
+
+				var today = new Date()
+
+				var timeDomainStart = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 08:00:00")
+				var timeDomainEnd = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 17:59:59")
+				var timeDomainStart2 = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 00:00:00")
+				var timeDomainEnd2 = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 23:59:59")
+				var x = d3.time.scale().domain([timeDomainStart, timeDomainEnd]).range([0, w - sidePadding]).clamp(true)
+				var x2 = d3.time.scale().domain([timeDomainStart2, timeDomainEnd2]).range([0, w - sidePadding]).clamp(true)
+
+				d3.select("svg").remove()
+
+				var svg = d3.selectAll(".svg")
+										.append("svg")
+										.attr("width", w)
+										.attr("height", h)
+
+				/********************************************************************************************************************************************/
+
+				/****************************************************************** vertlabels **************************************************************/
+				var prevGap = 0
+				var axisText = svg.append("g")
+													.selectAll("text")
+													.data(numOpOccurances)
+													.enter()
+													.append("text")
+													.text(function(d) {
+														if (groupName.hasOwnProperty(d[0])) {
+															return groupName[d[0]]
 														}
-													} else {
-														return topPadding + 12
-													}
-												})
-												.attr("font-size", function(d) {
-													if (groupName.hasOwnProperty(d[0])) {
-														return 12
-													}
-													return 11
-												})
-												.attr("text-anchor", "start")
-												.attr("text-height", 14)
-												.attr("font-weight", function(d) {
-													if (groupName.hasOwnProperty(d[0])) {
-														return "bold"
-													}
-												})
-
-			/************************************************************************************************************************************************/
-
-			/********************************************************************** make grids **************************************************************/
-			var xAxisBottom = d3.svg.axis()
-													.scale(x)
-													.orient('bottom')
-													.tickSize(-h + topPadding + 20, 0, 0)
-													.tickFormat(d3.time.format('%H:%M'))
-
-			var xAxisTop = d3.svg.axis()
-											.scale(x)
-											.orient('top')
-											.tickSize(0, 0, 0)
-											.tickFormat(d3.time.format('%H:%M'))
-			
-			svg.append('g')
-				.attr('class', 'grid bottom')
-				.attr('transform', 'translate(' + sidePadding + ', ' + (h - 50) + ')')
-				.call(xAxisBottom)
-				.selectAll("text")
-				.style("text-anchor", "middle")
-				.attr("fill", "#000")
-				.attr("stroke", "none")
-				.attr("font-size", 10)
-				.attr("dy", "1em")
-
-			svg.append('g')
-				.attr('class', 'grid top')
-				.attr('transform', 'translate(' + sidePadding + ', ' + (topPadding - 42) + ')')
-				.call(xAxisTop)
-				.selectAll("text")
-				.style("text-anchor", "middle")
-				.attr("fill", "#000")
-				.attr("stroke", "none")
-				.attr("font-size", 10)
-				.attr("dy", "1em")
-
-			/*********************************************************************************************************************************************/
-
-			/*************************************************************** Draw Rects *****************************************************************/
-			var bigRect = svg.append("g")
-											.append("rect")
-											.attr("x", 0)
-											.attr("y", function(d) {
-												return topPadding - 2
-											})
-											.attr("width", function(d) {
-												return w
-											})
-											.attr("height", function(d) {
-												return gap * (operations.length)
-											})
-											.attr("stroke", "#000")
-											.attr("fill", "none")
-
-			var numOpsOfPrevGrp = 0	// number of operations of previous group
-
-			var groupRects = svg.append("g")
-													.selectAll("rect")
-													.data(group).enter()
-													.append("rect")
-													.attr("x", 0)
-													.attr("y", function(d) {
-														var y = numOpsOfPrevGrp * gap + topPadding - 2
-														numOpsOfPrevGrp += d[1] + 1
-														return y
+														return d[0]
 													})
-													.attr("width", function(d) {
-														return w
+													.attr("x", 4)
+													.attr("y", function(d, i) {
+														if (i > 0) {
+															prevGap += numOpOccurances[i - 1][1]
+															return prevGap * gap + topPadding + 72
+														} else {
+															return topPadding + 72
+														}
 													})
-													.attr("height", function(d) {
-														return gap * (d[1] + 1)
+													.attr("font-size", function(d) {
+														if (groupName.hasOwnProperty(d[0])) {
+															return 12
+														}
+														return 11
 													})
-													.attr("stroke", "#000")
-													.attr("fill", "none")
+													.attr("text-anchor", "start")
+													.attr("text-height", 14)
+													.attr("font-weight", function(d) {
+														if (groupName.hasOwnProperty(d[0])) {
+															return "bold"
+														}
+													})
 
-			var rectOperations = svg.append("g")
-															.attr("class", "operations")
+				/************************************************************************************************************************************************/
 
-			rectOperations.selectAll("rect")
+				/********************************************************************** make grids **************************************************************/
+				var xAxisBottom = d3.svg.axis()
+														.scale(x)
+														.orient('bottom')
+														.tickSize(-h + topPadding + 60, 0, 0)
+														.tickFormat(d3.time.format('%H:%M'))
+
+				var xAxisTop = d3.svg.axis()
+												.scale(x)
+												.orient('top')
+												.tickSize(0, 0, 0)
+												.tickFormat(d3.time.format('%H:%M'))
+				
+				svg.append('g')
+					.attr('class', 'grid bottom')
+					.attr('transform', 'translate(' + sidePadding + ', ' + (h - 30) + ')')
+					.call(xAxisBottom)
+					.selectAll("text")
+					.style("text-anchor", "middle")
+					.attr("fill", "#000")
+					.attr("stroke", "none")
+					.attr("font-size", 10)
+					.attr("dy", "1em")
+
+				svg.append('g')
+					.attr('class', 'grid top')
+					.attr('transform', 'translate(' + sidePadding + ', ' + (topPadding + 18) + ')')
+					.call(xAxisTop)
+					.selectAll("text")
+					.style("text-anchor", "middle")
+					.attr("fill", "#000")
+					.attr("stroke", "none")
+					.attr("font-size", 10)
+					.attr("dy", "1em")
+
+				/*********************************************************************************************************************************************/
+
+				/*************************************************************** Draw Rects *****************************************************************/
+				var bigRect = svg.append("g")
+												.append("rect")
+												.attr("x", 0)
+												.attr("y", function(d) {
+													return topPadding + 58
+												})
+												.attr("width", function(d) {
+													return w
+												})
+												.attr("height", function(d) {
+													return gap * (operations.length)
+												})
+												.attr("stroke", "#000")
+												.attr("fill", "none")
+
+				var numOpsOfPrevGrp = 0	// number of operations of previous group
+
+				var groupRects = svg.append("g")
+														.selectAll("rect")
+														.data(group).enter()
+														.append("rect")
+														.attr("x", 0)
+														.attr("y", function(d) {
+															var y = numOpsOfPrevGrp * gap + topPadding + 58
+															numOpsOfPrevGrp += d[1] + 1
+															return y
+														})
+														.attr("width", function(d) {
+															return w
+														})
+														.attr("height", function(d) {
+															return gap * (d[1] + 1)
+														})
+														.attr("stroke", "#000")
+														.attr("fill", "none")
+
+				var rectOperations = svg.append("g").attr("class", "operations")
+
+				var rectOperation = rectOperations.selectAll("rect")
+																					.data(operations)
+																					.enter()
+																					.append("rect")
+																					.attr("rx", 3)
+																					.attr("ry", 3)
+																					.attr("x", function(d) {
+																						if (typeof d.STARTTIME !== 'undefined') {
+																							var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.STARTTIME)
+																							return x(barStartTime) + sidePadding
+																						} else {
+																							return 0
+																						}
+																					})
+																					.attr("y", function(d, i) {
+																						return i * gap + topPadding + 60
+																					})
+																					.attr("width", function(d) {
+																						if (typeof d.STARTTIME !== 'undefined') {
+																							var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.STARTTIME)
+																							var barEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.ENDTIME)
+																							return x(barEndTime) - x(barStartTime)
+																						} else {
+																							return 0
+																						}
+																					})
+																					.attr("height", barHeight)
+																					.attr("stroke", "none")
+																					.attr("fill", "red")
+																					.attr("opacity", 0.1)
+
+				var output = document.getElementById("tooltip")
+
+				rectOperation.on('mouseover', function(d) {
+					var	tooltip = '<p>Consultant Name: ' + d.CONSULTANT + '</p><br>' + 
+												'<p>Consultant Specialty: ' + d.speciality + '</p><br>' + 
+												'<p>Description: ' + d.Description + '</p><br>' + 
+												'<p>Estimated Time: ' + d.ESTTIME + '</p><br>'
+
+					output.innerHTML = tooltip
+					output.style.display = "block"
+					output.classList.add("operation-tooltip")
+				})
+				.on('mousemove', function(d) {
+					output.style.top = (d3.event.layerY + 10) + 'px'
+					output.style.left = (d3.event.layerX - 25) + 'px'
+				})
+				.on('mouseout', function(d) {
+					output.style.display = "none"
+					output.classList.remove("operation-tooltip")
+				})
+
+				var rectRooms = svg.append('g').attr("class", "rooms")
+
+				var i = -1, currentOpNumber = 0
+
+				var rectRoom = rectRooms.selectAll("rect")
+																.data(rooms).enter()
+																.append("rect")
+																.attr("rx", 3)
+																.attr("ry", 3)
+																.attr("x", function(d) {
+																	if (typeof d.roomCode !== 'undefined') {
+																		var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.events[0].EVENTTIME)
+																		return x(barStartTime) + sidePadding
+																	} else {
+																		return 0
+																	}
+																})
+																.attr("y", function(d) {
+																	if (currentOpNumber != d.opNumber) {
+																		currentOpNumber = d.opNumber
+																		i++
+																	}
+																	return i * gap + topPadding + 60
+																})
+																.attr("width", function(d) {
+																	if (typeof d.roomCode !== 'undefined') {
+																		var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.events[0].EVENTTIME)
+																		var barEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.events[d.events.length - 1].EVENTTIME)
+																		return x(barEndTime) - x(barStartTime)
+																	} else {
+																		return 0
+																	}
+																})
+																.attr("height", barHeight)
+																.attr("stroke", "none")
+																.attr("class", function(d) {
+																	if (typeof d.roomCode !== 'undefined') {
+																		return d.roomCode + " room"
+																	}
+																})
+
+				rectRoom.on('mouseover', function(d) {
+					var	tooltip = "<p>Theatre-Operation ID: " + d.opNumber + ' - Consultant: ' + d.events[0].CONSULTANT + '</p><br>'
+
+					for (let i in d.events) {
+						tooltip += '<p>' + d.events[i].EVENTTIME + ' ' + d.events[i].EVENTDESC + ' (' + d.events[i].EVENTCODE + ')</p>'
+					}
+
+					output.innerHTML = tooltip
+					output.style.display = "block"
+					output.classList.add(d.roomCode)
+				})
+				.on('mousemove', function(d) {
+					output.style.top = (d3.event.layerY + 10) + 'px'
+					output.style.left = (d3.event.layerX - 25) + 'px'
+				})
+				.on('mouseout', function(d) {
+					output.style.display = "none"
+					output.classList.remove(d.roomCode)
+				})
+
+				var operationText = svg.append("g").attr("class", "operation-text")
+
+				operationText.selectAll("text")
 										.data(operations)
 										.enter()
-										.append("rect")
-										.attr("rx", 3)
-										.attr("ry", 3)
+										.append("text")
+										.text(function(d) {
+											if (typeof d.STARTTIME !== 'undefined') {
+												return d.STARTTIME + " - " + d.ENDTIME
+											} else {
+												return ''
+											}
+										})
 										.attr("x", function(d) {
 											if (typeof d.STARTTIME !== 'undefined') {
 												var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.STARTTIME)
-												return x(barStartTime) + sidePadding
+												var barEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.ENDTIME)
+												return (x(barEndTime) - x(barStartTime)) / 2 + x(barStartTime) + sidePadding
 											} else {
 												return 0
 											}
 										})
 										.attr("y", function(d, i) {
-											return i * gap + topPadding
+											return i * gap + 74 + topPadding
 										})
-										.attr("width", function(d) {
-											if (typeof d.STARTTIME !== 'undefined') {
-												var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.STARTTIME)
-												var barEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.ENDTIME)
-												return x(barEndTime) - x(barStartTime)
-											} else {
-												return 0
-											}
-										})
-										.attr("height", barHeight)
-										.attr("stroke", "none")
-										.attr("fill", "red")
-										.attr("opacity", 0.1)
+										.attr("font-size", 11)
+										.attr("text-anchor", "middle")
+										.attr("text-height", barHeight)
+										.attr("fill", "#000")
 
-			var rectRooms = svg.append('g').attr("class", "rooms")
+				var timeline = svg.append('g').append("line")
+													.attr("x1", function() {
+														return x(today) + sidePadding
+													})
+													.attr("x2", function() {
+														return x(today) + sidePadding
+													})
+													.attr("y1", 90)
+													.attr("y2", h - 30)
+													.attr("style", "stroke:rgb(255,0,0);stroke-width:1")
 
-			var i = -1, currentOpNumber = 0
+				/*********************************************************************************************************************************************/
 
-			var rectRoom = rectRooms.selectAll("rect")
-															.data(rooms).enter()
-															.append("rect")
-															.attr("rx", 3)
-															.attr("ry", 3)
-															.attr("x", function(d) {
-																if (typeof d.roomCode !== 'undefined') {
-																	var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.events[0].EVENTTIME)
-																	return x(barStartTime) + sidePadding
-																} else {
-																	return 0
-																}
-															})
-															.attr("y", function(d) {
-																if (currentOpNumber != d.opNumber) {
-																	currentOpNumber = d.opNumber
-																	i++
-																}
-																return i * gap + topPadding
-															})
-															.attr("width", function(d) {
-																if (typeof d.roomCode !== 'undefined') {
-																	var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.events[0].EVENTTIME)
-																	var barEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.events[d.events.length - 1].EVENTTIME)
-																	return x(barEndTime) - x(barStartTime)
-																} else {
-																	return 0
-																}
-															})
-															.attr("height", barHeight)
-															.attr("stroke", "none")
-															.attr("class", function(d) {
-																if (typeof d.roomCode !== 'undefined') {
-																	return d.roomCode
-																}
-															})
-
-			var output = document.getElementById("tooltip")
-
-			rectRoom.on('mouseover', function(d) {
-				var	tooltip = "<p>Theatre-Operation ID: " + d.opNumber + ' - Consultant: ' + d.events[0].CONSULTANT + '</p><br>'
-
-				for (let i in d.events) {
-					tooltip += '<p>' + d.events[i].EVENTTIME + ' ' + d.events[i].EVENTDESC + ' (' + d.events[i].EVENTCODE + ')</p>'
-				}
-
-				output.innerHTML = tooltip
-				output.style.display = "block"
-				output.classList.add(d.roomCode)
-			})
-			.on('mousemove', function(d) {
-				output.style.top = (d3.event.layerY + 10) + 'px'
-				output.style.left = (d3.event.layerX - 25) + 'px'
-			})
-			.on('mouseout', function(d) {
-				output.style.display = "none"
-				output.classList.remove(d.roomCode)
-			})
-
-			var operationText = svg.append("g").attr("class", "operation-text")
-
-			operationText.selectAll("text")
-									.data(operations)
-									.enter()
-									.append("text")
-									.text(function(d) {
-										if (typeof d.STARTTIME !== 'undefined') {
-											return d.STARTTIME + " - " + d.ENDTIME
-										} else {
-											return ''
-										}
-									})
-									.attr("x", function(d) {
-										if (typeof d.STARTTIME !== 'undefined') {
-											var barStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.STARTTIME)
-											var barEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " " + d.ENDTIME)
-											return (x(barEndTime) - x(barStartTime)) / 2 + x(barStartTime) + sidePadding
-										} else {
-											return 0
-										}
-									})
-									.attr("y", function(d, i) {
-										return i * gap + 14 + topPadding
-									})
-									.attr("font-size", 11)
-									.attr("text-anchor", "middle")
-									.attr("text-height", barHeight)
-									.attr("fill", "#000")
-
-			var timeline = svg.append('g').append("line")
-										.attr("x1", function() {
-											return x(today) + sidePadding
-										})
-										.attr("x2", function() {
-											return x(today) + sidePadding
-										})
-										.attr("y1", 70)
-										.attr("y2", h - 50)
-										.attr("style", "stroke:rgb(255,0,0);stroke-width:1")
-
-			/*********************************************************************************************************************************************/
-
-			/*************************************************************** draw slider context *********************************************************/
+				/*************************************************************** draw slider context *********************************************************/
 				var context = svg.append("g")
 												.attr("class", "context")
-												.attr("transform", "translate(" + 0 + "," + h + ")")
+												.attr("transform", "translate(0, 0)")
 
 				var xAxis2 = d3.svg.axis()
 													.scale(x2)
@@ -537,16 +614,11 @@ var dashboard = function() {
 													.tickPadding(8)
 													.tickFormat(d3.time.format('%H:%M'))
 
-				var extentStartTime = new Date()
-				var extentEndTime = new Date()
-
-				extentStartTime.setHours(extentStartTime.getHours() - 4)
-				extentEndTime.setHours(extentEndTime.getHours() + 4)
-
+				var extentStartTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 08:00:00")
+				var extentEndTime = new Date(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + " 17:59:59")
 				var brush = d3.svg.brush().x(x2).extent([extentStartTime, extentEndTime]).on("brush", brushed)
 
 				function brushed() {
-					currentRange = (brush.empty()? undefined : brush.extent())
 					x.domain(brush.empty() ? x2.domain() : brush.extent())
 
 					svg.select(".grid.bottom")
@@ -644,7 +716,16 @@ var dashboard = function() {
 							.selectAll("rect")
 							.attr("height", 60)
 
-			/*********************************************************************************************************************************************/
+				/*********************************************************************************************************************************************/
+			}
+
+			process()
+
+			$('.group-filter').on('select2:select', function (e) {
+				var data = e.params.data
+				filterValue = data.id
+				process()
+			});
 		})
 	})
 }
@@ -652,3 +733,12 @@ var dashboard = function() {
 dashboard()
 
 setInterval(dashboard, 30000)
+
+
+$(".group-filter").select2()
+
+$(".room-filter").on("click", function(e) {
+	e.preventDefault()
+	$("rect.room").hide()
+	$("rect.room." + $(this).data("room")).show()
+})

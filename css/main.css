@@ -13,6 +13,21 @@ body {
 	margin: 40px;
 }
 
+.title {
+	font-size: 18px;
+	color: #009FFC;
+	text-align: center;
+}
+
+.filter-wrap {
+	margin-top: 10px;
+	margin-bottom: 30px;
+}
+
+.group-filter {
+	width: 200px;
+}
+
 .grid .tick {
 	stroke: lightgrey;
 	opacity: 0.3;
@@ -90,4 +105,19 @@ g.brush > .resize {
 	fill: #f4418b;
 	background-color: #f4418b;
 	color: #fff;
+}
+
+.operation-tooltip {
+	background-color: #f4dfdc;
+	color: #000;
+}
+
+.select2 {
+	margin-right: 20px;
+}
+
+.room-filter {
+	display: inline-block;
+	padding: 10px 20px;
+	font-size: 0;
 }

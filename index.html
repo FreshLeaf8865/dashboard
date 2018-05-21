@@ -2,11 +2,32 @@
 <html>
 	<head>
 		<title>Dashboard</title>
+		<link type="text/css" href="vendor/select2/css/select2.min.css" rel="stylesheet" />
 		<link type="text/css" href="css/main.css" rel="stylesheet" />
 	</head>
 	<body>
-		<div class="svg"></div>
+		<div class="svg">
+			<p class="title">Real-Time Theatre Dashboard</p>
+			<div class="filter-wrap">
+				<select class="group-filter">
+					<option>All</option>
+					<optgroup></optgroup>
+					<optgroup label="Main Theatres">
+						<option>Main T3</option>
+						<option>Main T4</option>
+					</optgroup>
+				</select>
+				<a href="#" class="room-filter INPR" data-room="INPR">INPR</a>
+				<a href="#" class="room-filter INAN" data-room="INAN">INAN</a>
+				<a href="#" class="room-filter INTH" data-room="INTH">INTH</a>
+				<a href="#" class="room-filter RECA" data-room="RECA">RECA</a>
+				<a href="#" class="room-filter REC1" data-room="REC1">REC1</a>
+				<a href="#" class="room-filter REC2" data-room="REC2">REC2</a>
+			</div>
+		</div>
 		<div id="tooltip"></div>
+		<script type="text/javascript" src="vendor/jquery.min.js"></script>
+		<script type="text/javascript" src="vendor/select2/js/select2.min.js"></script>
 		<script type="text/javascript" src="vendor/d3.v3.min.js"></script>
 		<script type="text/javascript" src="js/main.js"></script>
 	</body>
