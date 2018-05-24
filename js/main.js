@@ -739,6 +739,11 @@ $(".group-filter").select2()
 
 $(".room-filter").on("click", function(e) {
 	e.preventDefault()
-	$("rect.room").hide()
-	$("rect.room." + $(this).data("room")).show()
+
+	if ($(this).data("room") == 'ALL') {
+		$("rect.room").show()
+	} else {
+		$("rect.room").hide()
+		$("rect.room." + $(this).data("room")).show()
+	}
 })
