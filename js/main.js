@@ -83,7 +83,7 @@ var groupName = {
 	Endo: 'Endo Proc Theatres'
 }
 
-var filterValue = 'All'
+var filterValue = ['All']
 
 var margin = {
 	top : 40,
@@ -166,37 +166,43 @@ var dashboard = function() {
 			}
 
 			/******************** draw filter box ********************/
-			var filterboxHtml = "<option>All</option><optgroup>"
+			var filterboxHtml = "<option value=\"All\" " + ((filterValue != null && filterValue.includes("All")) ? 'selected' : '') + ">All</option><optgroup>"
 
 			for (let i in group) {
 				if (typeof group[i].groupTitle !== 'undefined') {
 					filterboxHtml += '</optgroup><optgroup label="' + group[i].groupTitle + '">'
 				} else {
-					var selected = group[i].usage == filterValue ? 'selected' : ''
-					filterboxHtml += '<option ' + selected + '>' + group[i].usage + '</option>'
+					var selected = (filterValue != null && filterValue.includes(group[i].usage)) ? 'selected' : ''
+					filterboxHtml += '<option value="' + group[i].usage + '" ' + selected + '>' + group[i].usage + '</option>'
 				}
 			}
+			filterboxHtml += '</optgroup>'
+			filterboxHtml = filterboxHtml.replace("<optgroup></optgroup>", "")
 			$(".group-filter").html(filterboxHtml)
 			/*********************************************************/
 
 			function process() {
-				if (filterValue == 'All') {
-					rooms = allrooms
-					operations = alloperations
+				if (filterValue != null) {
+					if (filterValue.includes('All')) {
+						rooms = allrooms
+						operations = alloperations
+					} else {
+						rooms = [], operations = []
+
+						for (let i in allrooms) {
+							if (filterValue.includes(allrooms[i].usage)) {
+								rooms.push(allrooms[i])
+							}
+						}
+
+						for (let i in alloperations) {
+							if (filterValue.includes(alloperations[i].USAGE)) {
+								operations.push(alloperations[i])
+							}
+						}
+					}
 				} else {
-					rooms = [], operations = []
-
-					for (let i in allrooms) {
-						if (allrooms[i].usage == filterValue) {
-							rooms.push(allrooms[i])
-						}
-					}
-
-					for (let i in alloperations) {
-						if (alloperations[i].USAGE == filterValue) {
-							operations.push(alloperations[i])
-						}
-					}
+					rooms = operations = []
 				}
 
 				tempOperations = operations
@@ -219,98 +225,86 @@ var dashboard = function() {
 				operationusages = checkUnique(operationusages)
 				roomusages = checkUnique(roomusages)
 
-				/******************************************************** Grouping ********************************************************************/
+				/******************************************************** subGrouping *********************************************************/
+				var subGroupedOperations = [], subGroupedRooms = []
 
-				var numOpOccurances = [], numRoomOccurances = []
-
-				for (let i = 0; i < operationusages.length; i++) {
-					numOpOccurances[i] = [operationusages[i], getCount(operationusages[i], operationusagesUnfiltered)]
+				for (let i in operations) {
+					if (typeof subGroupedOperations[operations[i].USAGE] !== 'undefined') {
+						subGroupedOperations[operations[i].USAGE].push(operations[i])
+					} else {
+						subGroupedOperations[operations[i].USAGE] = [{subGroupTitle: operations[i].USAGE, USAGE: operations[i].USAGE}]
+						subGroupedOperations[operations[i].USAGE].push(operations[i])
+					}
 				}
 
-				for (let i = 0; i < roomusages.length; i++) {
-					numRoomOccurances[i] = [roomusages[i], getCount(roomusages[i], roomusagesUnfiltered)]
+				for (let i in rooms) {
+					if (typeof subGroupedRooms[rooms[i].usage] !== 'undefined') {
+						subGroupedRooms[rooms[i].usage].push(rooms[i])
+					} else {
+						subGroupedRooms[rooms[i].usage] = [{subGroupTitle: rooms[i].usage, usage: rooms[i].usage, opNumber: -1}]
+						subGroupedRooms[rooms[i].usage].push(rooms[i])
+					}
 				}
 
-				var group = [], tempGroup = []
+				/*********************************************************************************************************************************************/
 
-				for (let i in numOpOccurances) {
+				/*************************************************************** grouping ********************************************************************/
+				var groupedOperations = [], groupedRooms = []
+
+				for (let key in subGroupedOperations) {
 					for (let j in keysOfGroupName) {
-						if (numOpOccurances[i][0].indexOf(keysOfGroupName[j]) !== -1) {
-							group.push([keysOfGroupName[j], numOpOccurances[i][1], numRoomOccurances[i][1]])
+						if (key.indexOf(keysOfGroupName[j]) !== -1) {
+							if (typeof groupedOperations[keysOfGroupName[j]] !== 'undefined') {
+								for (let i in subGroupedOperations[key]) {
+									groupedOperations[keysOfGroupName[j]].push(subGroupedOperations[key][i])
+								}
+							} else {
+								groupedOperations[keysOfGroupName[j]] = [{groupTitle: groupName[keysOfGroupName[j]]}]
+
+								for (let i in subGroupedOperations[key]) {
+									groupedOperations[keysOfGroupName[j]].push(subGroupedOperations[key][i])
+								}
+							}
 							break
 						}
 					}
 				}
 
-				for (let i in group) {
-					if (typeof tempGroup[group[i][0]] !== 'undefined') {
-						tempGroup[group[i][0]][0] += group[i][1]
-						tempGroup[group[i][0]][1] += group[i][2]
-					} else {
-						tempGroup[group[i][0]] = [group[i][1], group[i][2]]
+				for (let key in subGroupedRooms) {
+					for (let j in keysOfGroupName) {
+						if (key.indexOf(keysOfGroupName[j]) !== -1) {
+							if (typeof groupedRooms[keysOfGroupName[j]] !== 'undefined') {
+								for (let i in subGroupedRooms[key]) {
+									groupedRooms[keysOfGroupName[j]].push(subGroupedRooms[key][i])
+								}
+							} else {
+								groupedRooms[keysOfGroupName[j]] = [{groupTitle: groupName[keysOfGroupName[j]], opNumber: 1}]
+
+								for (let i in subGroupedRooms[key]) {
+									groupedRooms[keysOfGroupName[j]].push(subGroupedRooms[key][i])
+								}
+							}
+							break
+						}
 					}
 				}
-
-				group = []
-
-				var keysOfTempGroup = Object.keys(tempGroup)
-
-				for (let i in keysOfTempGroup) {
-					group[i] = [keysOfTempGroup[i], tempGroup[keysOfTempGroup[i]][0], tempGroup[keysOfTempGroup[i]][1]]
-				}
-
 				/*********************************************************************************************************************************************/
-
-				/******************************************** Add empty record to operations for group title *************************************************/
 				operations = []
 
-				var currentKey = 0
-
-				for (let i in group) {
-					operations[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[group[i][0]], USAGE: group[i][0]}
-
-					for (let j = currentKey; j < currentKey + group[i][1]; j++) {
-						operations[parseInt(j) + parseInt(i) + 1] = tempOperations[j]
+				for (let i in groupedOperations) {
+					for (let j in groupedOperations[i]) {
+						operations.push(groupedOperations[i][j])
 					}
-
-					currentKey += group[i][1]
 				}
-				/*********************************************************************************************************************************************/
-
-				/******************************************** Add empty record to rooms for group title *************************************************/
+				
 				rooms = []
 
-				var currentKey = 0
-
-				for (let i in group) {
-					rooms[parseInt(currentKey) + parseInt(i)] = {groupTitle: groupName[group[i][0]], opNumber: 1}
-
-					for (let j = currentKey; j < currentKey + group[i][2]; j++) {
-						rooms[parseInt(j) + parseInt(i) + 1] = tempRooms[j]
+				for (let i in groupedRooms) {
+					for (let j in groupedRooms[i]) {
+						rooms.push(groupedRooms[i][j])
 					}
-
-					currentKey += group[i][2]
 				}
 				/*********************************************************************************************************************************************/
-
-				/******************************************** get numOpOccurances from operations including group title ***************************************/
-				var operationusages = []
-
-				for (let i = 0; i < operations.length; i++) {
-					operationusages.push(operations[i].USAGE)
-				}
-
-				var operationusagesUnfiltered = operationusages
-
-				operationusages = checkUnique(operationusages)
-
-				var numOpOccurances = []
-
-				for (let i = 0; i < operationusages.length; i++) {
-					numOpOccurances[i] = [operationusages[i], getCount(operationusages[i], operationusagesUnfiltered)]
-				}
-				/*********************************************************************************************************************************************/
-
 				var w = document.body.clientWidth - margin.left - margin.right
 				var h = (operations.length) * gap + topPadding * 2 + 60
 
@@ -333,41 +327,48 @@ var dashboard = function() {
 				/********************************************************************************************************************************************/
 
 				/****************************************************************** vertlabels **************************************************************/
-				var prevGap = 0
 				var axisText = svg.append("g")
 													.selectAll("text")
-													.data(numOpOccurances)
+													.data(operations)
 													.enter()
 													.append("text")
 													.text(function(d) {
-														if (groupName.hasOwnProperty(d[0])) {
-															return groupName[d[0]]
-														}
-														return d[0]
-													})
-													.attr("x", 4)
-													.attr("y", function(d, i) {
-														if (i > 0) {
-															prevGap += numOpOccurances[i - 1][1]
-															return prevGap * gap + topPadding + 72
+														if (typeof d['groupTitle'] !== 'undefined') {
+															return d['groupTitle']
+														} else if (typeof d['subGroupTitle'] !== 'undefined') {
+															return d['subGroupTitle']
 														} else {
-															return topPadding + 72
+															return d['Patient_Name']
 														}
 													})
-													.attr("font-size", function(d) {
-														if (groupName.hasOwnProperty(d[0])) {
+													.attr("x", function(d) {
+														if (typeof d['groupTitle'] !== 'undefined') {
+															return 4
+														} else if (typeof d['subGroupTitle'] !== 'undefined') {
+															return 4
+														} else {
 															return 12
 														}
-														return 11
+													})
+													.attr("y", function(d, i) {
+														return i * gap + topPadding + 72
+													})
+													.attr("font-size", function(d) {
+														if (typeof d['groupTitle'] !== 'undefined') {
+															return 12
+														} else if (typeof d['subGroupTitle'] !== 'undefined') {
+															return 11
+														} else {
+															return 10
+														}
 													})
 													.attr("text-anchor", "start")
 													.attr("text-height", 14)
 													.attr("font-weight", function(d) {
-														if (groupName.hasOwnProperty(d[0])) {
+														if (typeof d['groupTitle'] !== 'undefined') {
 															return "bold"
 														}
 													})
-
 				/************************************************************************************************************************************************/
 
 				/********************************************************************** make grids **************************************************************/
@@ -423,26 +424,31 @@ var dashboard = function() {
 												.attr("stroke", "#000")
 												.attr("fill", "none")
 
-				var numOpsOfPrevGrp = 0	// number of operations of previous group
-
-				var groupRects = svg.append("g")
-														.selectAll("rect")
-														.data(group).enter()
-														.append("rect")
-														.attr("x", 0)
-														.attr("y", function(d) {
-															var y = numOpsOfPrevGrp * gap + topPadding + 58
-															numOpsOfPrevGrp += d[1] + 1
-															return y
+				// group split line
+				var groupSplits = svg.append("g")
+														.selectAll("line")
+														.data(operations).enter()
+														.append("line")
+														.attr("x1", 0)
+														.attr("x2", w)
+														.attr("y1", function(d, i) {
+															return i * gap + topPadding + 58
 														})
-														.attr("width", function(d) {
-															return w
+														.attr("y2", function(d, i) {
+															return i * gap + topPadding + 58
 														})
-														.attr("height", function(d) {
-															return gap * (d[1] + 1)
+														.attr("stroke", function(d, i) {
+															if (typeof d['groupTitle'] !== 'undefined') {
+																return "#000"
+															} else if (typeof d['subGroupTitle'] !== 'undefined') {
+																if (typeof operations[i - 1]['OPNUMBER'] !== 'undefined') {
+																	return "#D3D3D3"
+																}
+															} else {
+																return "transparent"
+															}
 														})
-														.attr("stroke", "#000")
-														.attr("fill", "none")
+														.attr("stroke-width", "1")
 
 				var rectOperations = svg.append("g").attr("class", "operations")
 
@@ -721,11 +727,20 @@ var dashboard = function() {
 
 			process()
 
-			$('.group-filter').on('select2:select', function (e) {
-				var data = e.params.data
-				filterValue = data.id
-				process()
-			});
+			$('.group-filter').multiselect({
+				columns: 1,
+				placeholder: '',
+				search: true,
+				showCheckbox: true,
+				searchOptions: {
+					'default': ''
+				},
+				selectAll: false,
+				onOptionClick : function(element, option) {
+					filterValue = $('.group-filter').val()
+					process()
+				}
+			})
 		})
 	})
 }
@@ -733,9 +748,6 @@ var dashboard = function() {
 dashboard()
 
 setInterval(dashboard, 30000)
-
-
-$(".group-filter").select2()
 
 $(".room-filter").on("click", function(e) {
 	e.preventDefault()

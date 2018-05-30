@@ -9,12 +9,11 @@
 		<div class="svg">
 			<p class="title">Real-Time Theatre Dashboard</p>
 			<div class="filter-wrap">
-				<select class="group-filter">
-					<option>All</option>
-					<optgroup></optgroup>
+				<select class="group-filter" multiple="multiple">
+					<option value="All">All</option>
 					<optgroup label="Main Theatres">
-						<option>Main T3</option>
-						<option>Main T4</option>
+						<option value="Main T3">Main T3</option>
+						<option value="Main T4">Main T4</option>
 					</optgroup>
 				</select>
 				<a href="#" class="room-filter INPR" data-room="INPR">INPR</a>
@@ -28,7 +27,7 @@
 		</div>
 		<div id="tooltip"></div>
 		<script type="text/javascript" src="vendor/jquery.min.js"></script>
-		<script type="text/javascript" src="vendor/select2/js/select2.min.js"></script>
+		<script type="text/javascript" src="vendor/jquery.multiselect.js"></script>
 		<script type="text/javascript" src="vendor/d3.v3.min.js"></script>
 		<script type="text/javascript" src="js/main.js"></script>
 	</body>
